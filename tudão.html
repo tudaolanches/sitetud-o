@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <!-- viewport: garante responsividade no celular -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Tudão - Lanches & Porções</title>
+
+    <!-- Fontes do Google (Fredoka One para o logo e Roboto para o resto) -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Ícones FontAwesome (usado em botões/ícones como WhatsApp, seta, GPS etc.) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        /* Variáveis de cores do tema (fácil trocar o tema inteiro mudando aqui) */
+        :root { --cor-primaria: #FFD700; --cor-secundaria: #D32F2F; --cor-texto: #1a1a1a; --cor-fundo-card: #ffffff; --cor-cinza: #f4f4f4; }
+
+        /* Reset básico e fonte padrão */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Roboto', sans-serif; }
+
+        /* Fundo do site + espaço embaixo para não ficar atrás do carrinho fixo */
+        body { background-color: var(--cor-primaria); color: var(--cor-texto); padding-bottom: 80px; }
+
+        /* Header fixo no topo (sticky) */
+        header { background-color: var(--cor-secundaria); color: white; padding: 15px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.2); position: sticky; top: 0; z-index: 100; }
+
+        /* Logo com fonte “cartoon” */
+        .logo-text { font-family: 'Fredoka One', cursive; font-size: 2rem; text-shadow: 2px 2px 0px #000; }
+
+        /* Barra de categorias (rolagem horizontal) fixa abaixo do header */
+        .categorias { display: flex; overflow-x: auto; padding: 15px; gap: 10px; background: white; position: sticky; top: 65px; z-index: 90; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        /* Botões de categoria */
+        .cat-btn { background: var(--cor-cinza); border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; white-space: nowrap; cursor: pointer; }
+        .cat-btn.ativo { background: var(--cor-secundaria); color: white; }
+
+        /* Container central do cardápio */
+        .menu-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+
+        /* Grid responsivo (auto-fill) */
+        .grid-produtos { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+
+        /* Card de produto */
+        .produto-card { background: var(--cor-fundo-card); border-radius: 15px; padding: 15px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between; }
+
+        /* Cabeçalho do produto (número/id) */
+        .prod-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .prod-numero { background: var(--cor-secundaria); color: white; padding: 2px 8px; border-radius: 5px; font-weight: bold; font-size: 0.9rem; }
+
+        /* Nome e descrição */
+        .prod-nome { font-size: 1.2rem; font-weight: 800; }
+        .prod-desc { font-size: 0.9rem; color: #555; margin-bottom: 10px; }
+
+        /* Rodapé do card com preço + botão */
+        .prod-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px dashed #ccc; padding-top: 10px; }
+        .prod-preco { font-size: 1.4rem; font-weight: 900; color: var(--cor-secundaria); }
+        .btn-add { background: #27ae60; color: white; border: none; padding: 8px 20px; border-radius: 25px; font-weight: bold; cursor: pointer; }
+
+        /* Modal (fundo escuro) */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 200; justify-content: center; align-items: flex-end; }
+
+        /* Conteúdo do modal (bottom sheet no mobile) */
+        .modal-content { background: white; width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 20px; max-height: 90vh; overflow-y: auto; position: relative; }
+        .close-modal { position: absolute; top: 15px; right: 15px; font-size: 1.5rem; cursor: pointer; }
+
+        /* Barra do carrinho fixa no rodapé (aparece quando tem itens) */
+        #cart-bar { position: fixed; bottom: 0; left: 0; width: 100%; background: white; padding: 15px; z-index: 150; display: none; justify-content: space-between; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); }
+
+        /* Tela de checkout (fica oculta até clicar em finalizar pedido) */
+        #checkout-screen { display: none; background: white; min-height: 100vh; padding: 20px; max-width: 800px; margin: 0 auto; }
+
+        /* Títulos das seções no checkout */
+        .section-title { font-family: 'Fredoka One', cursive; color: var(--cor-secundaria); margin: 20px 0 10px 0; border-bottom: 2px solid #000; }
+
+        /* Inputs e selects */
+        .form-control { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; }
+
+        /* Botões específicos */
+        .btn-calcular { background: #2196F3; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .btn-gps { background: #607D8B; color: white; border: none; padding: 12px; border-radius: 8px; width: 100%; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+
+        /* Status do cálculo do frete (mensagens) */
+        .status-entrega { font-size: 0.9rem; font-weight: bold; margin-bottom: 10px; }
+        .status-sucesso { color: #2e7d32; }
+        .status-erro { color: #d32f2f; }
+
+        /* Classe para esconder elementos */
+        .hidden { display: none; }
+
+        /* Caixa do troco */
+        .troco-box { background:#fff6e5; padding:12px; border-radius:8px; margin-top:8px; border:1px solid #ffd57f; }
+
+        /* Texto auxiliar */
+        .small-muted { font-size:0.85rem; color:#555; }
+        .condo-note { font-size:0.9rem; color:#333; margin-top:6px; }
+    </style>
+</head>
+<body>
+
+    <!-- Cabeçalho fixo -->
+    <header>
+        <div class="logo-text">TUDÃO</div>
+        <div style="font-size: 0.8rem;">Fah e Pri Lanches</div>
+    </header>
+
+    <!-- TELA PRINCIPAL (cardápio) -->
+    <div id="main-screen">
+        <!-- Barra de categorias dinâmica (JS preenche) -->
+        <div class="categorias" id="categorias-bar"></div>
+
+        <div class="menu-container">
+            <!-- Grid do cardápio (JS renderiza os cards aqui) -->
+            <div id="menu-grid" class="grid-produtos"></div>
+        </div>
+    </div>
+
+    <!-- Barra inferior do carrinho (aparece quando cart.length > 0) -->
+    <div id="cart-bar">
+        <div class="cart-total" id="floating-total">R$ 0,00</div>
+        <!-- Botão chama showCheckout() -->
+        <button class="btn-add" style="background:var(--cor-secundaria)" onclick="showCheckout()">FINALIZAR PEDIDO</button>
+    </div>
+
+    <!-- Modal do produto (adicionais/observações) -->
+    <div class="modal" id="modal-produto">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h3 id="modal-titulo"></h3>
+            <p id="modal-desc"></p>
+
+            <!-- Opções de adicionais (JS cria checkboxes aqui conforme categoria) -->
+            <div id="opcoes-adicionais" style="margin:15px 0;"></div>
+
+            <!-- Aviso para porções de batata (preço dos adicionais varia pelo tamanho) -->
+            <div id="batata-adicional-note" class="small-muted hidden">
+              Adicionais por tamanho conforme tabela: MINI / P / M / G / TUDÃO.
+            </div>
+
+            <!-- Observações do cliente -->
+            <textarea id="modal-obs" class="form-control" placeholder="Observações..."></textarea>
+            <!-- Confirma item no carrinho -->
+            <button class="btn-add" style="width:100%" onclick="confirmAddToCart()">ADICIONAR AO CARRINHO</button>
+        </div>
+    </div>
+
+    <!-- TELA CHECKOUT -->
+    <div id="checkout-screen">
+        <!-- Volta: recarrega a página (isso zera carrinho e estado) -->
+        <button onclick="location.reload()" style="border:none; background:none; color:blue; cursor:pointer;"><i class="fas fa-arrow-left"></i> Voltar ao Menu</button>
+
+        <h2 class="section-title">Finalizar Pedido</h2>
+        <!-- Itens do carrinho aparecem aqui -->
+        <div id="cart-items-wrapper"></div>
+
+        <h2 class="section-title">Entrega</h2>
+        <!-- Select: retirada ou entrega -->
+        <select class="form-control" id="tipo-entrega" onchange="toggleDelivery()">
+            <option value="retirada">Retirar no Local</option>
+            <option value="entrega">Entrega em Bauru</option>
+        </select>
+
+        <!-- Área de entrega (esconde quando for retirada) -->
+        <div id="delivery-info" class="hidden">
+            <!-- OBS/ERRO: getMinhaLocalizacao() NÃO existe no seu JS -->
+            <button type="button" class="btn-gps" onclick="getMinhaLocalizacao()">
+                <i class="fas fa-location-arrow"></i> USAR MINHA LOCALIZAÇÃO (GPS)
+            </button>
+
+            <!-- Endereço (pode receber autocomplete do Google Places) -->
+            <input type="text" id="endereco-input" class="form-control" placeholder="Rua e Número (Ex: Rua Batista de Carvalho, 123)">
+
+            <!-- OBS/ERRO: calcularFreteGoogle() NÃO existe no seu JS -->
+            <button type="button" class="btn-calcular" onclick="calcularFreteGoogle()">CALCULAR TAXA DE ENTREGA</button>
+
+            <!-- Mostra status do cálculo do frete -->
+            <div id="status-calculo" class="status-entrega"></div>
+
+            <!-- Checkbox condomínio -->
+            <div style="margin-top:10px;">
+                <label><input type="checkbox" id="is-condominio" onchange="onCondominioChange()"> Condomínio / Apartamento </label>
+                <div class="condo-note">Marque se o endereço for condomínio.</div>
+            </div>
+
+            <!-- Inputs extras de condomínio -->
+            <div id="condominio-info" class="hidden" style="margin-top:8px;">
+                <input type="text" id="condominio-bloco" class="form-control" placeholder="Bloco (ex: A)">
+                <input type="text" id="condominio-apto" class="form-control" placeholder="Apto (ex: 101)">
+            </div>
+
+            <!-- Complemento/bairro -->
+            <input type="text" id="endereco-comp" class="form-control" placeholder="Bairro / Complemento" style="margin-top:10px;">
+            <!-- Campo “interno” para guardar o valor numérico do frete -->
+            <input type="hidden" id="taxa-entrega-valor" value="0">
+        </div>
+
+        <h2 class="section-title">Pagamento</h2>
+        <!-- Nome do cliente (obrigatório no WhatsApp) -->
+        <input type="text" id="cliente-nome" class="form-control" placeholder="Seu Nome">
+
+        <!-- Forma de pagamento: muda lógica do troco -->
+        <select class="form-control" id="forma-pagamento" onchange="toggleTroco()">
+            <option value="Pix">Pix</option>
+            <option value="Cartão">Cartão</option>
+            <option value="Dinheiro">Dinheiro</option>
+        </select>
+
+        <!-- Seção troco (só mostra quando forma = Dinheiro) -->
+        <div id="troco-section" class="hidden">
+            <div style="margin-top:8px;">
+                <label class="small-muted"><input type="checkbox" id="precisa-troco" onchange="onPrecisaTrocoChange()"> Preciso de troco</label>
+            </div>
+
+            <!-- Inputs do troco (mostra quando checkbox "Preciso de troco" estiver marcada) -->
+            <div id="troco-inputs" class="hidden" style="margin-top:10px;">
+                <!-- inputmode numeric: teclado numérico no celular -->
+                <input type="text" id="valor-pagamento" class="form-control" placeholder="Valor que você dará (ex: 100,00)" inputmode="numeric" oninput="onValorPagamentoInput(this)">
+                <div id="troco-valor" class="troco-box" style="display:none;"></div>
+            </div>
+        </div>
+
+        <!-- Box de total e detalhamento -->
+        <div style="background:#eee; padding:20px; text-align:center; border-radius:10px; margin-top:20px;">
+            <p>Total a Pagar:</p>
+            <h1 id="checkout-total" style="color:var(--cor-secundaria)">R$ 0,00</h1>
+            <p id="checkout-subtext" class="small-muted" style="margin-top:8px;"></p>
+        </div>
+
+        <!-- Envia resumo do pedido para WhatsApp -->
+        <button class="btn-add" style="width:100%; background:#25D366; padding:15px; margin-top:20px;" onclick="sendToWhatsApp()">
+            <i class="fab fa-whatsapp"></i> ENVIAR PEDIDO VIA WHATSAPP
+        </button>
+    </div>
+
+<script>
+  // =========================
+  // CONFIGURAÇÕES (constantes)
+  // =========================
+
+  // Coordenadas da loja (usadas para cálculo de distância/frete via Google)
+  const LOJA_LAT = -22.319773;
+  const LOJA_LNG = -49.024114;
+
+  // Taxa adicional fixa quando endereço é condomínio
+  const COND_FEE = 1.00;
+
+  // =========================
+  // DADOS DO CARDÁPIO (menuData)
+  // =========================
+  // Cada item: id, categoria (cat), nome, descrição, preço
+  // OBS: você comentou que substituiu a seção pastéis pelo novo conjunto (salgados + doces).
+  const menuData = [
+    // --- LANCHES ---
+    { id: 1, cat: 'lanches', nome: 'X-Tudão Especial', desc: '2 Hambúrgueres, 2 Salsichas, 2 Ovos, 2 Filés de Frango, Bacon, Batata, Queijo, Presunto, Catupiry, Vinagrete, Alface', preco: 40.50 },
+    { id: 2, cat: 'lanches', nome: 'X-Tudo', desc: 'Hamburguer, Salsicha, Ovo, Filé de Frango, Bacon, Batata, Queijo, Presunto, Catupiry, Vinagrete, Maionese, Catchup e Alface.', preco: 30.50 },
+    { id: 3, cat: 'lanches', nome: 'X-Tudo Frango', desc: 'Salsicha, Ovo, Filé de Frango, Bacon, Batata, Queijo, Presunto, Vinagrete, Maionese, Catchup e Alface.', preco: 29.50 },
+    { id: 4, cat: 'lanches', nome: 'X-Frango Salada', desc: 'Filé de Frango, Batata, Queijo, Presunto, Vinagrete, Maionese, Catchup e Alface.', preco: 24.50 },
+    { id: 5, cat: 'lanches', nome: 'X-Frango Catupiry', desc: 'Filé de Frango + Catupiry, Batata, Queijo, Presunto, Vinagrete, Maionese, Catchup e Alface.', preco: 26.00 },
+    { id: 6, cat: 'lanches', nome: 'X-Frango Bacon', desc: 'Filé de Frango, Bacon, Batata, Queijo, Presunto, Vinagrete, Maionese, Catchup e Alface.', preco: 26.50 },
+    { id: 7, cat: 'lanches', nome: 'X-Egg Frango', desc: 'Filé de Frango, Ovo, Batata, Queijo, Presunto, Vinagrete, Maionese, Catchup e Alface.', preco: 25.50 },
+    { id: 8, cat: 'lanches', nome: 'X-Egg Frango Bacon', desc: 'Filé de Frango, Ovo, Bacon, Batata, Queijo, Presunto, Vinagrete, Maionese, Catchup e Alface.', preco: 27.50 },
+    { id: 9, cat: 'lanches', nome: 'Americano', desc: 'Carne Bovina, Ovo, Batata, Queijo, Presunto, Tomate, Maionese e Alface.', preco: 26.00 },
+    { id: 10, cat: 'lanches', nome: 'X-Bacon Salada', desc: 'Hamburguer, Bacon, Batata, Queijo, Presunto, Vinagrete, Maionese, Catchup e Alface.', preco: 26.50 },
+    { id: 11, cat: 'lanches', nome: 'X-Egg Bacon', desc: 'Hamburguer, Bacon, Ovo, Batata, Queijo, Presunto, Vinagrete, Maionese, Catchup e Alface.', preco: 27.00 },
+    { id: 12, cat: 'lanches', nome: 'X-Salada Especial', desc: 'Hamburguer, Batata, Queijo, Presunto, Vinagrete, Maionese, Catchup e Alface.', preco: 22.50 },
+    { id: 13, cat: 'lanches', nome: 'X-Egg Calabresa', desc: 'Hamburguer, Ovo, Calabresa, Batata, Queijo, Presunto, Vinagrete, Maionese, Catchup e Alface.', preco: 25.00 },
+    { id: 14, cat: 'lanches', nome: 'X-Calabresa', desc: 'Hamburguer, Calabresa, Batata, Queijo, Presunto, Vinagrete, Maionese, Catchup e Alface.', preco: 24.50 },
+    { id: 15, cat: 'lanches', nome: 'X-Burguer', desc: 'Hamburguer, Batata, Queijo, Vinagrete, Maionese, Catchup e Alface.', preco: 18.50 },
+    { id: 16, cat: 'lanches', nome: 'Big Burguer Especial', desc: '2 Hamburgueres, Batata, Presunto, Queijo, Vinagrete, Maionese, Catchup e Alface.', preco: 24.50 },
+    { id: 17, cat: 'lanches', nome: 'Hamburguer Simples', desc: 'Hamburguer, Batata, Vinagrete, Maionese, Catchup e Alface.', preco: 17.50 },
+    { id: 18, cat: 'lanches', nome: 'X-Cheddar', desc: 'Hamburguer, Queijo, Cheddar, Batata, Tomate, Maionese, Catchup e Alface.', preco: 21.50 },
+    { id: 210, cat: 'lanches', nome: 'X-MISTÃO ESPECIAL', desc: '2 Hambúrgueres, Presunto, Queijo, Catchup', preco: 28.50 },
+    { id: 212, cat: 'lanches', nome: 'SUPER DOGÃO ESPECIAL', desc: '2 Salsichas, Presunto, Queijo, Bacon, Vinagrete, Batata, Alface, Maionese e Catchup', preco: 27.00 },
+    { id: 213, cat: 'lanches', nome: 'DOG SIMPLES', desc: 'Salsicha, Queijo, Vinagrete, Batata, Alface, Maionese e Catchup', preco: 18.50 },
+    { id: 214, cat: 'lanches', nome: 'CACHORRO QUENTE SIMPLES', desc: 'Salsichas, Vinagrete, Batata, Maionese e Catchup', preco: 14.50 },
+    { id: 215, cat: 'lanches', nome: 'MISTO SALADA', desc: 'Presunto, Queijo, Tomate, Alface, Maionese e Catchup', preco: 17.50 },
+    { id: 216, cat: 'lanches', nome: 'MISTO QUENTE', desc: 'Presunto, Queijo, Maionese e Catchup', preco: 16.50 },
+    { id: 217, cat: 'lanches', nome: 'X-EGG SALADA', desc: 'Hambúrguer, Presunto, Queijo, Ovo, Vinagrete, Alface, Batata, Maionese e Catchup', preco: 24.00 },
+    { id: 218, cat: 'lanches', nome: 'X-CACHORRÃO QUENTE ESPECIAL', desc: '2 Salsichas, Vinagrete, Batata Palha, Alface, Milho, Catupiry, Presunto e Queijo, Catchup, Maionese e Mostarda', preco: 21.50 },
+    { id: 219, cat: 'lanches', nome: 'FOGUINHO', desc: '2 Salsichas, Ovo, Hambúrguer, Bacon, Catupiry, Frango, Presunto, Queijo e Batata Palha', preco: 32.00 },
+    { id: 220, cat: 'lanches', nome: 'X-JÃO', desc: '2 Salsichas, Hambúrguer, Presunto, Queijo, Batata Palha, Maionese e Catchup', preco: 20.50 },
+    { id: 221, cat: 'lanches', nome: 'X-BOSQUE (FRANGO)', desc: '2 Hambúrgueres, Presunto, Queijo, Cheddar, Bacon, Vinagrete, Batata Palha, Alface, Maionese e Catchup', preco: 28.00 },
+    { id: 222, cat: 'lanches', nome: 'X-FAH', desc: 'Hambúrguer, Queijo, Ovo, Bacon, Alface, Tomate e Cebola Fatiada Crua, Maionese, Molho Alho, Mostarda e Catupiry', preco: 28.00 },
+    { id: 223, cat: 'lanches', nome: 'X-PLATINA', desc: '2 Hambúrgueres, Tomate, Queijo, Presunto, Catchup, Maionese, Alface, Batata Palha, Catupiry e Bacon', preco: 28.00 },
+    //{ id: , cat: 'lanches', nome: '', desc: '', preco:  },
+
+    // --- LANCHES KIDS ---
+    { id: 101, cat: 'kids', nome: 'X-Kids 1', desc: 'Hamburgueres, Presunto, Queijo, Batata e Catchup.', preco: 15.50 },
+    { id: 102, cat: 'kids', nome: 'X-Kids 2', desc: 'Filé de Frango, Queijo, Batata e Catchup.', preco: 15.50 },
+    { id: 103, cat: 'kids', nome: 'X-Kids 3', desc: 'Salsicha, Presunto, Queijo, Batata e Catchup.', preco: 14.00 },
+
+    // --- PORÇÕES (batatas com tamanhos) ---
+    { id: 32, cat: 'porcoes', nome: 'Batata Palito Mini', desc: 'Mini porção.', preco: 10.00 },
+    { id: 33, cat: 'porcoes', nome: 'Batata Palito Pequena', desc: 'Porção pequena.', preco: 25.00 },
+    { id: 34, cat: 'porcoes', nome: 'Batata Palito Média', desc: 'Porção média.', preco: 30.00 },
+    { id: 35, cat: 'porcoes', nome: 'Batata Palito Grande', desc: 'Porção grande.', preco: 40.00 },
+    { id: 36, cat: 'porcoes', nome: 'Bata Tudão', desc: 'Batata Tudão (grande especial).', preco: 63.00 },
+
+    // --- PASTÉIS (SUBSTITUÍ ESTA SEÇÃO) ---
+    { id: 40, cat: 'pastéis', nome: 'Pastel Carne (01)', desc: 'Recheio de carne.', preco: 16.00 },
+    { id: 41, cat: 'pastéis', nome: 'Pastel Carne c/ Queijo (02)', desc: 'Carne com queijo.', preco: 18.00 },
+    { id: 42, cat: 'pastéis', nome: 'Pastel Carne c/ Milho (03)', desc: 'Carne com milho.', preco: 17.00 },
+    { id: 43, cat: 'pastéis', nome: 'Pastel Carne c/ Catupiry (04)', desc: 'Carne com catupiry.', preco: 18.00 },
+    { id: 44, cat: 'pastéis', nome: 'Pastel Carne c/ Ovo (05)', desc: 'Carne com ovo.', preco: 17.00 },
+    { id: 45, cat: 'pastéis', nome: 'Pastel Carne c/ Azeitonas (06)', desc: 'Carne com azeitonas.', preco: 17.00 },
+    { id: 46, cat: 'pastéis', nome: 'Pastel Carne Especial (07)', desc: 'Recheio especial da casa.', preco: 18.00 },
+    { id: 47, cat: 'pastéis', nome: 'Pastel Presunto e Queijo (08)', desc: 'Presunto e queijo.', preco: 16.00 },
+    { id: 48, cat: 'pastéis', nome: 'Pastel Pizza (09)', desc: 'Sabor pizza.', preco: 16.00 },
+    { id: 49, cat: 'pastéis', nome: 'Pastel Queijo (10)', desc: 'Somente queijo.', preco: 15.00 },
+    { id: 50, cat: 'pastéis', nome: 'Pastel Queijo c/ Bacon (11)', desc: 'Queijo com bacon.', preco: 18.00 },
+    { id: 51, cat: 'pastéis', nome: 'Pastel Queijo c/ Milho (12)', desc: 'Queijo com milho.', preco: 15.00 },
+    { id: 52, cat: 'pastéis', nome: 'Pastel Queijo c/ Catupiry (13)', desc: 'Queijo com catupiry.', preco: 18.00 },
+    { id: 53, cat: 'pastéis', nome: 'Pastel Frango (14)', desc: 'Recheio de frango.', preco: 15.00 },
+    { id: 54, cat: 'pastéis', nome: 'Pastel Frango c/ Bacon (15)', desc: 'Frango com bacon.', preco: 18.00 },
+    { id: 55, cat: 'pastéis', nome: 'Pastel Frango c/ Catupiry (16)', desc: 'Frango com catupiry.', preco: 18.00 },
+    { id: 56, cat: 'pastéis', nome: 'Pastel Frango c/ Cheddar (17)', desc: 'Frango com cheddar.', preco: 18.00 },
+    { id: 57, cat: 'pastéis', nome: 'Pastel Frango c/ Milho (18)', desc: 'Frango com milho.', preco: 17.00 },
+    { id: 58, cat: 'pastéis', nome: 'Pastel Frango Muçarela e Milho (19)', desc: 'Frango com muçarela e milho.', preco: 19.00 },
+    { id: 59, cat: 'pastéis', nome: 'Pastel Frango Especial (20)', desc: 'Recheio especial de frango.', preco: 20.00 },
+    { id: 60, cat: 'pastéis', nome: 'Pastel Calabresa (21)', desc: 'Calabresa acebolada.', preco: 16.00 },
+    { id: 61, cat: 'pastéis', nome: 'Pastel Calabresa c/ Queijo (22)', desc: 'Calabresa com queijo.', preco: 18.00 },
+    { id: 62, cat: 'pastéis', nome: 'Pastel Tudão (23)', desc: 'Pastel especial Tudão.', preco: 25.00 },
+    { id: 63, cat: 'pastéis', nome: 'Pastel Palmito c/ Queijo (24)', desc: 'Palmito com queijo.', preco: 19.00 },
+    { id: 64, cat: 'pastéis', nome: 'Pastel Palmito c/ Catupiry (25)', desc: 'Palmito com catupiry.', preco: 21.00 },
+    { id: 65, cat: 'pastéis', nome: 'Pastel Brócolis, Queijo e Bacon (26)', desc: 'Brócolis com queijo e bacon.', preco: 20.00 },
+    { id: 66, cat: 'pastéis', nome: 'Pastel Portuguesa (28)', desc: 'Presunto, Ovo, Tomate, Orégano.', preco: 22.00 },
+    { id: 67, cat: 'pastéis', nome: 'Pastel Carne Seca c/ Queijo (29)', desc: 'Carne seca com queijo.', preco: 20.00 },
+    { id: 68, cat: 'pastéis', nome: 'Pastel Carne Seca c/ Catupiry e Bacon (30)', desc: 'Carne seca com catupiry e bacon.', preco: 23.00 },
+
+    // doces
+    { id: 69, cat: 'pastéis', nome: 'Pastel Chocolate ao Leite', desc: 'Doce.', preco: 15.00 },
+    { id: 70, cat: 'pastéis', nome: 'Pastel Nutella', desc: 'Nutella.', preco: 19.00 },
+    { id: 71, cat: 'pastéis', nome: 'Pastel Nutella c/ Morango', desc: 'Nutella com morango.', preco: 20.50 },
+    { id: 72, cat: 'pastéis', nome: 'Pastel Prestígio', desc: 'Prestígio.', preco: 9.00 },
+    { id: 73, cat: 'pastéis', nome: 'Pastel Brigadeiro', desc: 'Brigadeiro.', preco: 5.00 },
+    { id: 74, cat: 'pastéis', nome: 'Pastel Sonho de Valsa', desc: 'Sonho de Valsa.', preco: 5.00 },
+    { id: 75, cat: 'pastéis', nome: 'Pastel Romeu e Julieta', desc: 'Romeu e Julieta.', preco: 12.00 },
+    { id: 76, cat: 'pastéis', nome: 'Pastel Pé na Cova', desc: 'Pé na Cova.', preco: 7.00 },
+
+    // bebidas (ids mantidos separados para unicidade)
+    { id: 77, cat: 'bebidas', nome: 'Refrigerante Lata', desc: '350ml', preco: 6.00 },
+    { id: 230, cat: 'bebidas', nome: 'Refrigerante 2L', desc: 'Garrafa 2 Litros', preco: 14.00 },
+    { id: 78, cat: 'bebidas', nome: 'Coca-Cola 1L', desc: 'Garrafa 1 Litro', preco: 10.50 },
+    { id: 79, cat: 'bebidas', nome: 'Coca-Cola 2L', desc: 'Garrafa 2 Litros', preco: 15.00 },
+    { id: 80, cat: 'bebidas', nome: 'Cerveja Lata', desc: 'Lata', preco: 6.00 },
+    { id: 81, cat: 'bebidas', nome: 'Água', desc: 'Sem gás', preco: 4.00 },
+    { id: 82, cat: 'bebidas', nome: 'Suco Laranja 500ml', desc: 'Natural', preco: 11.00 },
+    { id: 83, cat: 'bebidas', nome: 'Suco Laranja 1L', desc: 'Natural', preco: 18.00 },
+    { id: 84, cat: 'bebidas', nome: 'Suco Abacaxi 500ml', desc: 'Natural', preco: 11.00 },
+    { id: 85, cat: 'bebidas', nome: 'Suco Abacaxi 1L', desc: 'Natural', preco: 18.00 },
+    { id: 86, cat: 'bebidas', nome: 'Suco Maracujá c/ Água 500ml', desc: 'Natural', preco: 13.00 },
+    { id: 87, cat: 'bebidas', nome: 'Suco Maracujá c/ Água 1L', desc: 'Natural', preco: 19.00 },
+    { id: 88, cat: 'bebidas', nome: 'Suco Morango c/ Leite 500ml', desc: 'Natural com Leite', preco: 14.00 },
+    { id: 89, cat: 'bebidas', nome: 'Suco Morango c/ Leite 1L', desc: 'Natural com Leite', preco: 20.00 },
+    { id: 90, cat: 'bebidas', nome: 'Limonada Suíça 500ml', desc: 'Natural', preco: 13.00 },
+    { id: 91, cat: 'bebidas', nome: 'Limonada Suíça 1L', desc: 'Natural', preco: 18.00 },
+
+    // combos
+    { id: 200, cat: 'combos', nome: 'Combo Opção 1', desc: 'Dogão Especial + Refri Guaraná/Pepsi + Batata Mini.', preco: 35.99 },
+    { id: 201, cat: 'combos', nome: 'Combo Opção 2', desc: 'X-Burguer + Refri Guaraná/Pepsi + Batata Mini.', preco: 35.99 },
+    { id: 202, cat: 'combos', nome: 'Combo Opção 3', desc: 'X-Frango Salada + Refri Guaraná/Pepsi + Batata Mini.', preco: 37.99 }
+  ];
+
+  // =========================
+  // ESTADO (carrinho e item atual)
+  // =========================
+  let cart = [];
+  let currentItem = null;
+
+  // Função auxiliar para arredondar valores em centavos (evita erros de ponto flutuante)
+  function roundToCents(v) { return Math.round(v * 100) / 100; }
+
+  // =========================
+  // CATEGORIAS (barra superior)
+  // =========================
+  const categoryButtons = [
+      { key: 'todos', label: 'Cardápio Completo' },
+      { key: 'lanches', label: 'Lanches' },
+      { key: 'pastéis', label: 'Pastéis' },
+      { key: 'porcoes', label: 'Porções' },
+      { key: 'bebidas', label: 'Bebidas' }
+  ];
+
+  // Monta a barra de categorias dinamicamente
+  function buildCategoryBar() {
+      const bar = document.getElementById('categorias-bar');
+      bar.innerHTML = '';
+      categoryButtons.forEach((c, i) => {
+          const btn = document.createElement('button');
+          btn.className = 'cat-btn' + (i === 0 ? ' ativo' : '');
+          btn.innerText = c.label;
+          btn.onclick = () => filterMenu(c.key, btn);
+          bar.appendChild(btn);
+      });
+  }
+
+  // Filtra o menu pela categoria selecionada
+  function filterMenu(cat, btnEl) {
+      document.querySelectorAll('#categorias-bar .cat-btn').forEach(b => b.classList.remove('ativo'));
+      btnEl.classList.add('ativo');
+      if (cat === 'todos') renderMenu(menuData);
+      else renderMenu(menuData.filter(it => it.cat === cat));
+  }
+
+  // Ao carregar a página: monta categorias, renderiza tudo, atualiza carrinho
+  window.onload = () => { buildCategoryBar(); renderMenu(menuData); updateCartUI(); };
+
+  // Renderiza os cards na tela conforme a lista recebida
+  function renderMenu(list) {
+      const grid = document.getElementById('menu-grid');
+      if (!grid) return;
+      grid.innerHTML = list.map(item => `
+          <div class="produto-card">
+              <div>
+                  <div class="prod-header"><span class="prod-numero">#${item.id}</span></div>
+                  <div class="prod-nome">${item.nome}</div>
+                  <p class="prod-desc">${item.desc}</p>
+              </div>
+              <div class="prod-footer">
+                  <div class="prod-preco">R$ ${item.preco.toFixed(2).replace('.',',')}</div>
+                  <button class="btn-add" onclick="openModal(${item.id})">Adicionar</button>
+              </div>
+          </div>`).join('');
+  }
+
+  // =========================
+  // ADICIONAIS PARA BATATA (por tamanho)
+  // =========================
+
+  // Relaciona id da porção com “chave de tamanho” (mini/p/m/g/tudao)
+  const batataSizeKeyById = {
+    32: 'mini', 33: 'p', 34: 'm', 35: 'g', 36: 'tudao',
+    37: 'm', 38: 'g'
+  };
+
+  // Tabela de preço dos adicionais por tamanho
+  const batataExtrasPrices = {
+    mini: { 'Bacon': 3.00, 'Cheddar': 2.00, 'Catupiry': 2.00, 'Muçarela': 3.00, 'Pão com alho': 5.00, 'Batata Palha': 2.00 },
+    p:    { 'Bacon': 5.00, 'Cheddar': 4.00, 'Catupiry': 3.00, 'Muçarela': 5.00, 'Pão com alho': 5.00, 'Batata Palha': 2.00 },
+    m:    { 'Bacon': 8.00, 'Cheddar': 5.00, 'Catupiry': 6.00, 'Muçarela': 8.00, 'Pão com alho': 5.00, 'Batata Palha': 2.00 },
+    g:    { 'Bacon':10.00, 'Cheddar': 6.00, 'Catupiry': 7.00, 'Muçarela':10.00, 'Pão com alho': 5.00, 'Batata Palha': 2.00 },
+    tudao:{ 'Bacon':12.00, 'Cheddar': 8.00, 'Catupiry':10.00, 'Muçarela':12.00, 'Pão com alho': 5.00, 'Batata Palha': 2.00 }
+  };
+
+  // Adicionais padrão usados em lanches e pastéis
+  const lanchesExtras = {
+    'Calabresa': 4.50, 'Alface': 1.50, 'Catupiry': 4.00, 'Hambúrguer': 5.00,
+    'Ovo': 2.50, 'Queijo': 3.50, 'Salsicha': 3.50, 'Vinagrete': 3.50,
+    'Bacon': 5.00, 'Batata Palha': 2.00, 'Cheddar': 3.50, 'Milho': 2.50,
+    'Presunto': 3.50, 'Salada Crua': 3.50
+  };
+
+  // =========================
+  // MODAL (abrir/fechar e montar adicionais)
+  // =========================
+  function openModal(id) {
+      currentItem = menuData.find(i => i.id === id);
+      if(!currentItem) return;
+      document.getElementById('modal-titulo').innerText = currentItem.nome;
+      document.getElementById('modal-desc').innerText = currentItem.desc;
+      document.getElementById('modal-obs').value = '';
+
+      const opcoesEl = document.getElementById('opcoes-adicionais');
+      opcoesEl.innerHTML = '';
+      document.getElementById('batata-adicional-note').classList.add('hidden');
+
+      // Se for porção e tiver tamanho mapeado: usa tabela de adicionais por tamanho
+      const sizeKey = batataSizeKeyById[id];
+      if (currentItem.cat === 'porcoes' && sizeKey && batataExtrasPrices[sizeKey]) {
+          const prices = batataExtrasPrices[sizeKey];
+          document.getElementById('batata-adicional-note').classList.remove('hidden');
+          Object.keys(prices).forEach(extraName => {
+              const price = prices[extraName];
+              const label = document.createElement('label');
+              label.style.display = 'block';
+              label.style.marginBottom = '6px';
+              label.innerHTML = `<input type="checkbox" data-name="${extraName}" data-value="${price.toFixed(2)}"> ${extraName} (+R$ ${price.toFixed(2).replace('.',',')})`;
+              opcoesEl.appendChild(label);
+          });
+
+      // Se for lanche ou pastel: usa tabela padrão lanchesExtras
+      } else if (currentItem.cat === 'lanches' || currentItem.cat === 'pastéis') {
+          Object.keys(lanchesExtras).forEach(extraName => {
+              const price = lanchesExtras[extraName];
+              const label = document.createElement('label');
+              label.style.display = 'block';
+              label.style.marginBottom = '6px';
+              label.innerHTML = `<input type="checkbox" data-name="${extraName}" data-value="${price.toFixed(2)}"> ${extraName} (+R$ ${price.toFixed(2).replace('.',',')})`;
+              opcoesEl.appendChild(label);
+          });
+
+      // Bebidas: sem adicionais
+      } else if (currentItem.cat === 'bebidas') {
+          opcoesEl.innerHTML = `<div class="small-muted">Sem adicionais para bebidas.</div>`;
+
+      // Fallback genérico (caso categoria não esteja tratada)
+      } else {
+          opcoesEl.innerHTML = `
+            <label><input type="checkbox" value="5.00" data-name="Bacon"> Bacon (+R$ 5,00)</label><br>
+            <label><input type="checkbox" value="4.00" data-name="Catupiry"> Catupiry (+R$ 4,00)</label><br>
+            <label><input type="checkbox" value="2.50" data-name="Ovo"> Ovo (+R$ 2,50)</label>
+          `;
+      }
+
+      // Mostra modal
+      document.getElementById('modal-produto').style.display = 'flex';
+  }
+
+  // Fecha modal
+  function closeModal() { document.getElementById('modal-produto').style.display = 'none'; }
+
+  // Confirma adição ao carrinho: soma adicionais, salva observação e preço final
+  function confirmAddToCart() {
+      let extrasTotal = 0;
+      let extrasNomes = [];
+      document.querySelectorAll('#opcoes-adicionais input[type="checkbox"]:checked').forEach(ck => {
+          let v = ck.getAttribute('data-value') || ck.value;
+          let parsed = parseFloat(v);
+          if (isNaN(parsed)) parsed = 0;
+          extrasTotal += parsed;
+          extrasNomes.push(ck.getAttribute('data-name'));
+      });
+
+      cart.push({
+          ...currentItem,
+          extrasTotal,
+          extrasNomes,
+          obs: document.getElementById('modal-obs').value || '',
+          finalPrice: currentItem.preco + extrasTotal
+      });
+
+      closeModal();
+      updateCartUI();
+  }
+
+  // Atualiza total flutuante e mostra/esconde barra do carrinho
+  function updateCartUI() {
+      const sub = cart.reduce((sum, item) => sum + item.finalPrice, 0);
+      const taxa = parseFloat(document.getElementById('taxa-entrega-valor').value) || 0;
+      const cond = document.getElementById('is-condominio')?.checked ? COND_FEE : 0;
+      document.getElementById('floating-total').innerText = `R$ ${sub.toFixed(2).replace('.',',')}${(taxa+cond) > 0 ? ' + Taxa' : ''}`;
+      document.getElementById('cart-bar').style.display = cart.length > 0 ? 'flex' : 'none';
+      calculateTotal();
+  }
+
+  // Alterna entre retirada e entrega: mostra/esconde campos e zera taxa
+  function toggleDelivery() {
+      const tipo = document.getElementById('tipo-entrega').value;
+      document.getElementById('delivery-info').classList.toggle('hidden', tipo !== 'entrega');
+      document.getElementById('taxa-entrega-valor').value = 0;
+      document.getElementById('status-calculo').innerHTML = '';
+      document.getElementById('is-condominio').checked = false;
+      document.getElementById('condominio-info').classList.add('hidden');
+      calculateTotal();
+  }
+
+  // Quando marca condomínio: mostra bloco/apto + recalcula total e troco
+  function onCondominioChange() {
+      const checked = document.getElementById('is-condominio').checked;
+      const info = document.getElementById('condominio-info');
+      if (checked) info.classList.remove('hidden'); else info.classList.add('hidden');
+      calculateTotal(); recalcTroco();
+  }
+
+  // Mostra/esconde seção troco dependendo da forma de pagamento
+  function toggleTroco() {
+      const forma = document.getElementById('forma-pagamento').value;
+      const sec = document.getElementById('troco-section');
+      if (forma === 'Dinheiro') sec.classList.remove('hidden');
+      else {
+          sec.classList.add('hidden');
+          document.getElementById('precisa-troco').checked = false;
+          document.getElementById('troco-inputs').classList.add('hidden');
+          document.getElementById('valor-pagamento').value = '';
+          document.getElementById('troco-valor').style.display = 'none';
+      }
+      calculateTotal();
+  }
+
+  // Checkbox “preciso de troco”: mostra/esconde input do valor pago
+  function onPrecisaTrocoChange() {
+      const checked = document.getElementById('precisa-troco').checked;
+      const inputs = document.getElementById('troco-inputs');
+      if (checked) inputs.classList.remove('hidden');
+      else {
+          inputs.classList.add('hidden');
+          document.getElementById('valor-pagamento').value = '';
+          document.getElementById('troco-valor').style.display = 'none';
+      }
+      recalcTroco();
+  }
+
+  // Formata o input do valor pago para “X.XXX,YY” enquanto digita
+  function onValorPagamentoInput(el) {
+      const onlyDigits = el.value.replace(/\D/g, '');
+      if (!onlyDigits) { el.value = ''; recalcTroco(); return; }
+      const asNumber = parseInt(onlyDigits, 10);
+      const cents = (asNumber / 100).toFixed(2);
+      const parts = cents.split('.');
+      let intPart = parts[0];
+      const decPart = parts[1];
+      intPart = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      el.value = intPart + ',' + decPart;
+      recalcTroco();
+  }
+
+  // Converte string BRL (“1.234,56”) para number (1234.56)
+  function parseBRLToNumber(brlStr) {
+      if (!brlStr) return 0;
+      const cleaned = String(brlStr).replace(/\./g, '').replace(',', '.').replace(/[^\d.]/g, '');
+      const n = parseFloat(cleaned);
+      return isNaN(n) ? 0 : n;
+  }
+
+  // Recalcula o troco (se necessário) e atualiza detalhamento de subtotal/taxa/condomínio
+  function recalcTroco() {
+      const sub = cart.reduce((sum, i) => sum + i.finalPrice, 0);
+      const taxa = parseFloat(document.getElementById('taxa-entrega-valor').value) || 0;
+      const cond = document.getElementById('is-condominio')?.checked ? COND_FEE : 0;
+      const total = roundToCents(sub + taxa + cond);
+
+      const precisa = document.getElementById('precisa-troco')?.checked;
+      const display = document.getElementById('troco-valor');
+      const valPag = parseBRLToNumber(document.getElementById('valor-pagamento')?.value);
+
+      if (precisa && valPag > 0) {
+          const troco = roundToCents(valPag - total);
+          display.style.display = 'block';
+          if (troco >= 0) display.innerHTML = `<b>Troco a devolver:</b> R$ ${troco.toFixed(2).replace('.',',')}`;
+          else display.innerHTML = `<b>Valor insuficiente:</b> faltam R$ ${Math.abs(troco).toFixed(2).replace('.',',')}`;
+      } else {
+          display.style.display = 'none';
+      }
+      updateCheckoutSubtext(total);
+  }
+
+  // Mostra uma linha explicando subtotal/taxa/condomínio/total no checkout
+  function updateCheckoutSubtext(total) {
+      const subtextEl = document.getElementById('checkout-subtext');
+      const taxa = parseFloat(document.getElementById('taxa-entrega-valor').value) || 0;
+      const cond = document.getElementById('is-condominio')?.checked ? COND_FEE : 0;
+      const subtotal = cart.reduce((sum, i) => sum + i.finalPrice, 0);
+      let parts = [`Subtotal: R$ ${subtotal.toFixed(2).replace('.',',')}`];
+      if (taxa > 0) parts.push(`Taxa: R$ ${taxa.toFixed(2).replace('.',',')}`);
+      if (cond > 0) parts.push(`Adicional condomínio: R$ ${cond.toFixed(2).replace('.',',')}`);
+      parts.push(`Total: R$ ${total.toFixed(2).replace('.',',')}`);
+      subtextEl.innerText = parts.join(' | ');
+  }
+
+ 
+  
+  function calculateTotal() {
+      const sub = cart.reduce((sum, i) => sum + i.finalPrice, 0);
+      const baseTaxa = parseFloat(document.getElementById('taxa-entrega-valor').value) || 0;
+      const cond = document.getElementById('is-condominio')?.checked ? COND_FEE : 0;
+      const total = roundToCents(sub + baseTaxa + cond);
+      document.getElementById('checkout-total').innerText = `R$ ${total.toFixed(2).replace('.',',')}`;
+      updateCheckoutSubtext(total);
+      recalcTroco();
+  }
+
+  // Mostra a tela de checkout e lista itens do carrinho
+  function showCheckout() {
+      const main = document.getElementById('main-screen');
+      const cartBar = document.getElementById('cart-bar');
+      const checkout = document.getElementById('checkout-screen');
+      if (main) main.style.display = 'none';
+      if (cartBar) cartBar.style.display = 'none';
+      if (checkout) checkout.style.display = 'block';
+      const wrapper = document.getElementById('cart-items-wrapper');
+      if (wrapper) {
+          if (!cart || cart.length === 0) {
+              wrapper.innerHTML = '<div style="padding:10px;">Nenhum item no carrinho.</div>';
+          } else {
+              wrapper.innerHTML = cart.map(i => `
+                <div style="padding:10px; border-bottom:1px solid #eee;">
+                  <b>${i.nome}</b><br>
+                  <small>R$ ${i.finalPrice.toFixed(2).replace('.',',')}</small>
+                </div>
+              `).join('');
+          }
+      }
+      if (typeof calculateTotal === 'function') calculateTotal();
+  }
+
+  // Monta a mensagem final e abre WhatsApp com o texto preenchido
+  function sendToWhatsApp() {
+      const nome = document.getElementById('cliente-nome').value.trim();
+      if(!nome) return alert("Seu nome é obrigatório!");
+      const tipo = document.getElementById('tipo-entrega').value;
+      const baseTax = parseFloat(document.getElementById('taxa-entrega-valor').value) || 0;
+      const cond = document.getElementById('is-condominio')?.checked ? COND_FEE : 0;
+      const sub = cart.reduce((sum, i) => sum + i.finalPrice, 0);
+      const total = roundToCents(sub + baseTax + cond);
+      const forma = document.getElementById('forma-pagamento').value;
+      if(cart.length === 0) return alert("Adicione itens ao carrinho antes de finalizar.");
+      if(tipo === 'entrega' && baseTax <= 0) return alert("Calcule o frete primeiro!");
+      let precisaTroco = false; let valorPago = 0; let troco = 0;
+      if (forma === 'Dinheiro' && document.getElementById('precisa-troco')?.checked) {
+          precisaTroco = true;
+          valorPago = parseBRLToNumber(document.getElementById('valor-pagamento').value) || 0;
+          if (valorPago <= 0) return alert("Informe o valor que você dará para o troco.");
+          troco = roundToCents(valorPago - total);
+      }
+      let msg = `*PEDIDO TUDÃO*\n*Cliente:* ${nome}\n*Tipo:* ${tipo}\n*Pagamento:* ${forma}\n\n*ITENS:*`;
+      cart.forEach(i => {
+          const extras = i.extrasNomes && i.extrasNomes.length ? ` - Extras: ${i.extrasNomes.join(',')}` : '';
+          const obs = i.obs ? ` [Obs: ${i.obs}]` : '';
+          msg += `\n- ${i.nome}${extras}${obs}`;
+      });
+      if(tipo === 'entrega') {
+          let endereco = document.getElementById('endereco-input').value || '';
+          const comp = document.getElementById('endereco-comp').value || '';
+          msg += `\n\n*Endereço:* ${endereco}`;
+          if (document.getElementById('is-condominio')?.checked) {
+              const bloco = document.getElementById('condominio-bloco').value || '';
+              const apto = document.getElementById('condominio-apto').value || '';
+              msg += `\n*Condomínio/Apto:* Bloco: ${bloco} Apto: ${apto} (+R$ ${COND_FEE.toFixed(2).replace('.',',')})`;
+          }
+          msg += `\n*Complemento/Bairro:* ${comp}`;
+          msg += `\n*Taxa:* R$ ${baseTax.toFixed(2).replace('.',',')}${cond > 0 ? ' + R$ ' + cond.toFixed(2).replace('.',',') : ''}`;
+      }
+      msg += `\n*TOTAL:* R$ ${total.toFixed(2).replace('.',',')}`;
+      if (forma === 'Dinheiro') {
+          if (precisaTroco) {
+              msg += `\n*Valor que dará:* R$ ${valorPago.toFixed(2).replace('.',',')}`;
+              if (troco >= 0) msg += `\n*Troco a devolver:* R$ ${troco.toFixed(2).replace('.',',')}`;
+              else msg += `\n*Valor insuficiente:* faltam R$ ${Math.abs(troco).toFixed(2).replace('.',',')}`;
+          } else {
+              msg += `\n*Troco:* Não solicitado`;
+          }
+      }
+      window.open(`https://wa.me/5514991816332?text=${encodeURIComponent(msg)}`);
+  }
+</script>
+
+</body>
+</html>
