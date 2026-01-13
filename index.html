@@ -352,16 +352,12 @@ function loadState(){
 }
 
 function onFieldChange(){
-  // called by onchange/oninput for checkout fields to persist state
-  // also updates visible UI for delivery/troco
   const tipo=document.getElementById('tipo-entrega')?.value; if(tipo) document.getElementById('delivery-info').classList.toggle('hidden', tipo!=='entrega');
   const forma=document.getElementById('forma-pagamento')?.value; if(forma) document.getElementById('troco-section').classList.toggle('hidden', forma!=='Dinheiro');
   if(document.getElementById('precisa-troco')?.checked) document.getElementById('troco-inputs').classList.remove('hidden'); else document.getElementById('troco-inputs')?.classList.add('hidden');
   saveState();
   updateCartUI();
 }
-
-// attach input listeners after DOM available
 
 // ---------- Categories UI ----------
 const categoryButtons = [
@@ -384,7 +380,7 @@ function filterMenu(cat,btnEl){ document.querySelectorAll('#categorias-bar .cat-
 // ---------- Render menu / modal ----------
 function renderMenu(list){ const grid=document.getElementById('menu-grid'); if(!grid) return; grid.innerHTML = list.map(item=>`<div class="produto-card"><div><div class="prod-header"><span class="prod-numero">#${item.id}</span></div><div class="prod-nome">${item.nome}</div><p class="prod-desc">${item.desc}</p></div><div class="prod-footer"><div class="prod-preco">R$ ${item.preco.toFixed(2).replace('.',',')}</div><button class="btn-add" onclick="openModal(${item.id})">Adicionar</button></div></div>`).join(''); }
 
-/* Modified openModal: kids and combos now use same lanchesExtras as lanches/pastéis */
+/* openModal já configurada para lanches/pastéis/kids/combos + porções por tamanho */
 function openModal(id,cartIndex=null){
   currentItem = menuData.find(i=>i.id===id);
   if(!currentItem) return;
@@ -425,7 +421,7 @@ function openModal(id,cartIndex=null){
     });
 
   // lanches, pastéis, kids e combos usam lanchesExtras
-  } else if (currentItem.cat==='lanches' || currentItem.cat==='pastéis' || currentItem.cat==='kids' || currentItem.cat==='combos') {
+  } else if (['lanches','pastéis','kids','combos'].includes(currentItem.cat)) {
     Object.keys(lanchesExtras).forEach(extraName=>{
       const price = lanchesExtras[extraName];
       const checked = preExtras.includes(extraName)?'checked':'';
@@ -483,8 +479,7 @@ function openConfirmModal(){ if(cart.length===0) return alert('Adicione itens ao
 
 function closeConfirmModal(){ const m=document.getElementById('confirm-modal'); m.style.display='none'; m.setAttribute('aria-hidden','true'); }
 function editOrderFromConfirm(){ closeConfirmModal(); showCheckout(); }
-function finalizeSendToWhatsApp(){ const msg=buildOrderMessage(); closeConfirmModal(); // open whatsapp
- window.open(`https://wa.me/5514991816332?text=${encodeURIComponent(msg)}`, '_blank'); }
+function finalizeSendToWhatsApp(){ const msg=buildOrderMessage(); closeConfirmModal(); window.open(`https://wa.me/5514991816332?text=${encodeURIComponent(msg)}`, '_blank'); }
 
 // ---------- Save on relevant changes ----------
 function registerFieldListeners(){ const ids=['cliente-nome','tipo-entrega','forma-pagamento','endereco-input','endereco-comp','is-condominio','condominio-bloco','condominio-apto','precisa-troco','valor-pagamento']; ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; const ev=(el.tagName==='INPUT' && el.type==='checkbox') ? 'change' : 'input'; el.addEventListener(ev, ()=>{ onFieldChange(); saveState(); }); }); }
