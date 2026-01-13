@@ -384,8 +384,65 @@ function filterMenu(cat,btnEl){ document.querySelectorAll('#categorias-bar .cat-
 // ---------- Render menu / modal ----------
 function renderMenu(list){ const grid=document.getElementById('menu-grid'); if(!grid) return; grid.innerHTML = list.map(item=>`<div class="produto-card"><div><div class="prod-header"><span class="prod-numero">#${item.id}</span></div><div class="prod-nome">${item.nome}</div><p class="prod-desc">${item.desc}</p></div><div class="prod-footer"><div class="prod-preco">R$ ${item.preco.toFixed(2).replace('.',',')}</div><button class="btn-add" onclick="openModal(${item.id})">Adicionar</button></div></div>`).join(''); }
 
-function openModal(id,cartIndex=null){ currentItem = menuData.find(i=>i.id===id); if(!currentItem) return; currentCartIndex = cartIndex; document.getElementById('modal-titulo').innerText=currentItem.nome; document.getElementById('modal-desc').innerText=currentItem.desc; const qtyEl=document.getElementById('modal-qty'); qtyEl.value=1; let preExtras=[]; let preObs=''; if(currentCartIndex!==null && cart[currentCartIndex]){ const saved=cart[currentCartIndex]; qtyEl.value=saved.qty||1; preExtras=Array.isArray(saved.extrasNomes)?saved.extrasNomes.slice():[]; preObs=saved.obs||''; } document.getElementById('modal-obs').value=preObs; const opcoesEl=document.getElementById('opcoes-adicionais'); opcoesEl.innerHTML=''; document.getElementById('batata-adicional-note').classList.add('hidden'); const sizeKey=batataSizeKeyById[id]; if(currentItem.cat==='porcoes' && sizeKey && batataExtrasPrices[sizeKey]){ const prices=batataExtrasPrices[sizeKey]; document.getElementById('batata-adicional-note').classList.remove('hidden'); Object.keys(prices).forEach(extraName=>{ const price=prices[extraName]; const checked=preExtras.includes(extraName)?'checked':''; const label=document.createElement('label'); label.style.display='block'; label.style.marginBottom='6px'; label.innerHTML=`<input type="checkbox" data-name="${extraName}" data-value="${price.toFixed(2)}" ${checked}> ${extraName} (+R$ ${price.toFixed(2).replace('.',',')})`; opcoesEl.appendChild(label); }); } else if(currentItem.cat==='lanches' || currentItem.cat==='pastéis'){ Object.keys(lanchesExtras).forEach(extraName=>{ const price=lanchesExtras[extraName]; const checked=preExtras.includes(extraName)?'checked':''; const label=document.createElement('label'); label.style.display='block'; label.style.marginBottom='6px'; label.innerHTML=`<input type="checkbox" data-name="${extraName}" data-value="${price.toFixed(2)}" ${checked}> ${extraName} (+R$ ${price.toFixed(2).replace('.',',')})`; opcoesEl.appendChild(label); }); } else { opcoesEl.innerHTML=`<div class="small-muted">Sem adicionais para este item.</div>`; }
-  document.getElementById('modal-produto').style.display='flex'; }
+/* Modified openModal: kids and combos now use same lanchesExtras as lanches/pastéis */
+function openModal(id,cartIndex=null){
+  currentItem = menuData.find(i=>i.id===id);
+  if(!currentItem) return;
+  currentCartIndex = cartIndex;
+  document.getElementById('modal-titulo').innerText=currentItem.nome;
+  document.getElementById('modal-desc').innerText=currentItem.desc;
+
+  const qtyEl=document.getElementById('modal-qty');
+  qtyEl.value=1;
+  let preExtras=[];
+  let preObs='';
+  if(currentCartIndex!==null && cart[currentCartIndex]){
+    const saved=cart[currentCartIndex];
+    qtyEl.value=saved.qty||1;
+    preExtras=Array.isArray(saved.extrasNomes)?saved.extrasNomes.slice():[];
+    preObs=saved.obs||'';
+  }
+  document.getElementById('modal-obs').value=preObs;
+
+  const opcoesEl=document.getElementById('opcoes-adicionais');
+  opcoesEl.innerHTML='';
+  document.getElementById('batata-adicional-note').classList.add('hidden');
+
+  const sizeKey = batataSizeKeyById[id];
+
+  // porções com tabela por tamanho
+  if(currentItem.cat==='porcoes' && sizeKey && batataExtrasPrices[sizeKey]){
+    const prices = batataExtrasPrices[sizeKey];
+    document.getElementById('batata-adicional-note').classList.remove('hidden');
+    Object.keys(prices).forEach(extraName=>{
+      const price = prices[extraName];
+      const checked = preExtras.includes(extraName)?'checked':'';
+      const label = document.createElement('label');
+      label.style.display='block';
+      label.style.marginBottom='6px';
+      label.innerHTML = `<input type="checkbox" data-name="${extraName}" data-value="${price.toFixed(2)}" ${checked}> ${extraName} (+R$ ${price.toFixed(2).replace('.',',')})`;
+      opcoesEl.appendChild(label);
+    });
+
+  // lanches, pastéis, kids e combos usam lanchesExtras
+  } else if (currentItem.cat==='lanches' || currentItem.cat==='pastéis' || currentItem.cat==='kids' || currentItem.cat==='combos') {
+    Object.keys(lanchesExtras).forEach(extraName=>{
+      const price = lanchesExtras[extraName];
+      const checked = preExtras.includes(extraName)?'checked':'';
+      const label = document.createElement('label');
+      label.style.display='block';
+      label.style.marginBottom='6px';
+      label.innerHTML = `<input type="checkbox" data-name="${extraName}" data-value="${price.toFixed(2)}" ${checked}> ${extraName} (+R$ ${price.toFixed(2).replace('.',',')})`;
+      opcoesEl.appendChild(label);
+    });
+
+  // bebidas / fallback
+  } else {
+    opcoesEl.innerHTML = `<div class="small-muted">Sem adicionais para este item.</div>`;
+  }
+
+  document.getElementById('modal-produto').style.display='flex';
+}
 
 function closeModal(){ document.getElementById('modal-produto').style.display='none'; currentCartIndex=null; }
 
@@ -430,8 +487,7 @@ function finalizeSendToWhatsApp(){ const msg=buildOrderMessage(); closeConfirmMo
  window.open(`https://wa.me/5514991816332?text=${encodeURIComponent(msg)}`, '_blank'); }
 
 // ---------- Save on relevant changes ----------
-function registerFieldListeners(){ const ids=['cliente-nome','tipo-entrega','forma-pagamento','endereco-input','endereco-comp','is-condominio','condominio-bloco','condominio-apto','precisa-troco','valor-pagamento']; ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; const ev=(el.tagName==='INPUT' && el.type==='checkbox') ? 'change' : 'input'; el.addEventListener(ev, ()=>{ onFieldChange(); saveState(); }); });
-}
+function registerFieldListeners(){ const ids=['cliente-nome','tipo-entrega','forma-pagamento','endereco-input','endereco-comp','is-condominio','condominio-bloco','condominio-apto','precisa-troco','valor-pagamento']; ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; const ev=(el.tagName==='INPUT' && el.type==='checkbox') ? 'change' : 'input'; el.addEventListener(ev, ()=>{ onFieldChange(); saveState(); }); }); }
 
 // ---------- Init ----------
 window.addEventListener('DOMContentLoaded', ()=>{
