@@ -479,7 +479,7 @@ function openConfirmModal(){ if(cart.length===0) return alert('Adicione itens ao
 
 function closeConfirmModal(){ const m=document.getElementById('confirm-modal'); m.style.display='none'; m.setAttribute('aria-hidden','true'); }
 function editOrderFromConfirm(){ closeConfirmModal(); showCheckout(); }
-function finalizeSendToWhatsApp(){ const msg=buildOrderMessage(); closeConfirmModal(); window.open(`https://wa.me/5514991816332?text=${encodeURIComponent(msg)}`, '_blank'); }
+function finalizeSendToWhatsApp(){ const msg=buildOrderMessage(); closeConfirmModal(); window.open(`https://wa.me/5514997101296?text=${encodeURIComponent(msg)}`, '_blank'); }
 
 // ---------- Save on relevant changes ----------
 function registerFieldListeners(){ const ids=['cliente-nome','tipo-entrega','forma-pagamento','endereco-input','endereco-comp','is-condominio','condominio-bloco','condominio-apto','precisa-troco','valor-pagamento']; ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return; const ev=(el.tagName==='INPUT' && el.type==='checkbox') ? 'change' : 'input'; el.addEventListener(ev, ()=>{ onFieldChange(); saveState(); }); }); }
